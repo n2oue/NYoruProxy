@@ -97,37 +97,54 @@ exports.upload = function(req, res, next) {
             var accessToken = user.apikey;
             var accessTokenSecret = user.apisecret;
 
-        	twitter.statuses("update_with_media", {
-                	media: [img],
-                	status: msg
-        	    },
-            	accessToken,
-            	accessTokenSecret,
-            	function(error, data, response) {
-            	    //if (error) {
-            	    //    // something went wrong
-                    //    console.log(error);
-            	    //} else {
-            	        // data contains the data sent by twitter
-                        var image_url;
+            encode(img, function(err, imageData) {
+                twitter.statuses("upload_media", {
+                        media: imageData,
+                        isBase64: true
+                    },
+                    accessToken,
+                    accessTokenSecret,
+                    function(error, data, response) {
+
                         var api_res = JSON.parse(data);
-            	        if (api_res.entities.media) {
-            	        	image_url = api_res.entities.media[0].display_url;
-            	        } else {
-                            image_url = api_res.entities.urls[-1].display_url;
-            	        }
-                        res.render('result',{ image_url : image_url }, function(err, xml){
-                            if(err) {
-                                console.log(err);        
-                            } else {
-                                //console.log(xml);        
-                                res.send(xml);        
-                            } 
-                        });
-            	    //}
-            	}
-        	);
+                        
+                        twitter.statuses("update", {
+                            status: msg,
+                            media_ids: [api_res.media_id_string]
+                        },
+                        accessToken,
+                        accessTokenSecret,
+                        function(error, data, response) {
+                            //if (error) {
+                            //    // something went wrong
+                            //    console.log(error);
+                            //} else {
+                                // data contains the data sent by twitter
+                                var image_url;
+                                var api_res = JSON.parse(data);
+                                if (api_res.entities.media) {
+                                    image_url = api_res.entities.media[0].display_url;
+                                } else {
+                                    image_url = api_res.entities.urls[-1].display_url;
+                                }
+                                res.render('result',{ image_url : " " }, function(err, xml){
+                                    if(err) {
+                                        console.log(err);        
+                                    } else {
+                                        res.send(xml);        
+                                    } 
+                                });
+                            //}                                                    
+                        });                        
+                    }
+                );    
+            });
         }
     });
 }
 
+var encode = function(filename, callback) {
+    var file = fs.readFile(filename, function(err, data) {
+        callback(err, new Buffer(data).toString('base64'));
+    });
+}
